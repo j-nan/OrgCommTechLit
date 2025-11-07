@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human-AI Collaboration in Organizations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Calm Harmony (Warm neutrals: bg-gray-50, bg-white. Accent: indigo-600) -->
+    <!-- Application Structure Plan: A dashboard layout was chosen to present this annotated bibliography. This structure is superior to a static list as it allows for immediate, high-level synthesis via visualizations (charts, stats) and empowers user-driven exploration. The core interaction model is built around a sticky filter bar that directly maps to the user's research keywords (Human Agency, Decision-Making, etc.) and fields (Org Comm, Org Sci). Clicking a filter instantly updates the main article list, allowing users to "slice" the data and focus on relevant entries. This design transforms passive reading into an active, exploratory research process, directly addressing the goal of making the content "consumable and explorable." -->
+    <!-- Visualization & Content Choices: 
+        1. Info: Article counts by theme. Goal: Compare. Viz: Bar Chart (Chart.js/Canvas). Interaction: Filter pills update a separate article list, this chart provides context. Justification: Clearly compares research volume across key themes.
+        2. Info: Article counts by field. Goal: Inform (Proportion). Viz: Donut Chart (Chart.js/Canvas). Interaction: Filter pills for fields. Justification: Best for showing the simple part-to-whole relationship between the two academic fields.
+        3. Info: Total & Recent articles. Goal: Inform. Viz: Stat Cards (HTML/Tailwind). Interaction: None. Justification: Provides immediate, scannable context for the dataset.
+        4. Info: Annotated bibliography entries. Goal: Organize/Inform. Viz: Interactive List (HTML/CSS/JS). Interaction: List content is filtered by JS based on nav pill clicks. Justification: This is the core data; card layout enhances readability, and filtering makes the large dataset manageable.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        .filter-pill {
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-pill.active {
+            background-color: #4f46e5; /* bg-indigo-600 */
+            color: white;
+        }
+        .article-card {
+            transition: all 0.3s ease-in-out;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .article-card.hidden {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-indigo-600">Human-AI Collaboration in Organizations</h1>
+            <p class="text-md text-gray-600 mt-1">An interactive bibliography on agency, decision-making, and collaboration.</p>
+        </div>
+    </header>
+
+    <nav id="filter-nav" class="bg-white/70 backdrop-blur-md sticky top-[80px] md:top-[92px] z-40 shadow-sm py-4 px-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap gap-2 justify-center" id="filter-container">
+            <button class="filter-pill active text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="all">All Articles</button>
+            <button class="filter-pill text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="human-agency">Human Agency</button>
+            <button class="filter-pill text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="decision-making">Decision-Making</button>
+            <button class="filter-pill text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="humanlike-ai">Humanlike AI</button>
+            <button class="filter-pill text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="org-comm">Org. Communication</button>
+            <button class="filter-pill text-sm font-medium py-2 px-4 rounded-full cursor-pointer bg-gray-200 text-gray-800 hover:bg-indigo-100" data-filter="org-sci">Org. Science</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 mt-6">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            
+            <section class="lg:col-span-1 flex flex-col gap-6">
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">At-a-Glance</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center bg-gray-50 p-4 rounded-lg">
+                            <span class_id="total-articles" class="text-4xl font-bold text-indigo-600" id="total-articles">0</span>
+                            <p class="text-sm font-medium text-gray-600">Total Articles</p>
+                        </div>
+                        <div class="text-center bg-gray-50 p-4 rounded-lg">
+                            <span class="text-4xl font-bold text-indigo-600" id="recent-articles">0</span>
+                            <p class="text-sm font-medium text-gray-600">Recent (2023+)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Research Focus by Theme</h2>
+                    <p class="text-sm text-gray-600 mb-4">This chart illustrates the frequency of key research themes across the collected articles. "Human Agency" appears to be a dominant topic of investigation.</p>
+                    <div class="chart-container h-64 md:h-80">
+                        <canvas id="themeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Publications by Field</h2>
+                    <p class="text-sm text-gray-600 mb-4">The research is evenly distributed across the two primary fields, indicating strong cross-disciplinary interest in the topic.</p>
+                    <div class="chart-container h-64 md:h-80">
+                        <canvas id="fieldChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="lg:col-span-2">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Article Database</h2>
+                <p class="text-md text-gray-600 mb-6">Below is the curated list of articles. Use the filters above to explore the bibliography by theme or academic field. Each card provides a brief summary of the study's key findings and its relevance.</p>
+                <div id="article-list" class="flex flex-col gap-4">
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="mt-12 bg-gray-100 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm text-gray-500">Interactive Report generated by AI. Data is simulated for demonstration.</p>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+
+            const articlesData = [
+                {
+                    id: 1,
+                    citation: "Smith, J. A. & Johnson, R. (2023). 'Articulating Agency: Communicative Strategies for Human-AI Teaming.' <i>Journal of Organizational Communication</i>.",
+                    annotation: "Explores how human team members use specific communicative practices to negotiate agency and task boundaries when working alongside 'humanlike' AI collaborators. Finds that explicit role clarification and continuous negotiation are key to maintaining human agency.",
+                    tags: ["human-agency", "org-comm", "humanlike-ai"],
+                    year: 2023
+                },
+                {
+                    id: 2,
+                    citation: "Chen, L., & Ganesan, K. (2022). 'The \'Black Box\' and the Group: AI in Strategic Decision-Making.' <i>Organization Science</i>.",
+                    annotation: "A quantitative study on how AI-driven recommendations influence group decision-making processes. Results show a strong tendency towards 'algorithmic deference,' which can both speed up and introduce new, hidden biases into strategic outcomes.",
+                    tags: ["decision-making", "org-sci"],
+                    year: 2022
+                },
+                {
+                    id: 3,
+                    citation: "Williams, T. (2024). 'Beyond the \'Tool\' Metaphor: Relational Dimensions of Working with Humanlike AI.' <i>Organizational Communication Quarterly</i>.",
+                    annotation: "This qualitative study argues that employees often form para-social relationships with humanlike AI, impacting team trust, psychological safety, and informal information flow. This challenges the purely 'tool' perspective of AI in the workplace.",
+                    tags: ["humanlike-ai", "org-comm"],
+                    year: 2024
+                },
+                {
+                    id: 4,
+                    citation: "A-Sae, T. & Patel, S. (2023). 'Structuring for Synthesis: How AI-Mediated Decision Support Shapes Organizational Agility.' <i>Organization Science</i>.",
+                    annotation: "Examines how different AI support structures (e.g., augmentation vs. automation) affect a firm's ability to make agile decisions in volatile markets. Finds that augmentation models preserve critical human judgment and lead to more robust strategies.",
+                    tags: ["decision-making", "org-sci", "human-agency"],
+                    year: 2023
+                },
+                {
+                    id: 5,
+                    citation: "Becker, M. (2022). 'Negotiating Identity in Hybrid Teams: The \'Human\' in Human-AI Collaboration.' <i>Journal of Organizational Communication</i>.",
+                    annotation: "Focuses on how human workers' professional identity is challenged and reinforced when their primary collaborator is a sophisticated AI. Explores communicative 'identity work' used to delineate human vs. machine roles.",
+                    tags: ["human-agency", "org-comm"],
+                    year: 2022
+                },
+                {
+                    id: 6,
+                    citation: "Orlov, D. & Kwon, H. (2024). 'Algorithmic Management and Perceived Agency in Gig Work.' <i>Organization Science</i>.",
+                    annotation: "Links algorithmic management systems (a form of AI) to diminished worker agency and autonomy. Proposes organizational design principles that can embed 'contestability' and fairness into AI management, restoring a degree of human agency.",
+                    tags: ["human-agency", "decision-making", "org-sci"],
+                    year: 2024
+                }
+            ];
+
+            const articleList = document.getElementById('article-list');
+            
+            function renderArticles() {
+                if (!articleList) return;
+                articleList.innerHTML = '';
+                articlesData.forEach(article => {
+                    const tags = article.tags.join(' ');
+                    const tagHTML = article.tags.map(tag => {
+                        let label = '';
+                        let color = '';
+                        switch (tag) {
+                            case 'human-agency': label = 'Human Agency'; color = 'bg-blue-100 text-blue-800'; break;
+                            case 'decision-making': label = 'Decision-Making'; color = 'bg-green-100 text-green-800'; break;
+                            case 'humanlike-ai': label = 'Humanlike AI'; color = 'bg-purple-100 text-purple-800'; break;
+                            case 'org-comm': label = 'Org. Comm'; color = 'bg-yellow-100 text-yellow-800'; break;
+                            case 'org-sci': label = 'Org. Science'; color = 'bg-red-100 text-red-800'; break;
+                            default: label = tag; color = 'bg-gray-100 text-gray-800';
+                        }
+                        return `<span class="text-xs font-medium px-2.5 py-0.5 rounded ${color}">${label}</span>`;
+                    }).join(' ');
+
+                    const cardHTML = `
+                        <div class="article-card bg-white p-6 rounded-lg shadow-md border border-gray-100" data-tags="${tags}">
+                            <p class="text-md font-medium text-gray-800">${article.citation}</p>
+                            <p class="text-sm text-gray-600 mt-3">${article.annotation}</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                ${tagHTML}
+                            </div>
+                        </div>
+                    `;
+                    articleList.innerHTML += cardHTML;
+                });
+            }
+
+            function setupFiltering() {
+                const filterContainer = document.getElementById('filter-container');
+                const articleCards = document.querySelectorAll('.article-card');
+                
+                if (!filterContainer || !articleCards.length) return;
+
+                filterContainer.addEventListener('click', (e) => {
+                    const target = e.target.closest('.filter-pill');
+                    if (!target) return;
+                    
+                    const filter = target.dataset.filter;
+
+                    filterContainer.querySelectorAll('.filter-pill').forEach(btn => {
+                        btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-indigo-100');
+                    });
+                    
+                    target.classList.add('active', 'bg-indigo-600', 'text-white');
+                    target.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-indigo-100');
+
+                    articleCards.forEach(card => {
+                        const tags = card.dataset.tags;
+                        if (filter === 'all' || (tags && tags.includes(filter))) {
+                            card.classList.remove('hidden');
+                        } else {
+                            card.classList.add('hidden');
+                        }
+                    });
+                });
+            }
+
+            function updateStats() {
+                const totalEl = document.getElementById('total-articles');
+                const recentEl = document.getElementById('recent-articles');
+                if (!totalEl || !recentEl) return;
+
+                const recentCount = articlesData.filter(a => a.year >= 2023).length;
+                totalEl.textContent = articlesData.length;
+                recentEl.textContent = recentCount;
+            }
+
+            function initThemeChart() {
+                const ctx = document.getElementById('themeChart');
+                if (!ctx) return;
+
+                const themeData = {
+                    'human-agency': 0,
+                    'decision-making': 0,
+                    'humanlike-ai': 0
+                };
+                articlesData.forEach(a => {
+                    if (a.tags.includes('human-agency')) themeData['human-agency']++;
+                    if (a.tags.includes('decision-making')) themeData['decision-making']++;
+                    if (a.tags.includes('humanlike-ai')) themeData['humanlike-ai']++;
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Human Agency', 'Decision-Making', 'Humanlike AI'],
+                        datasets: [{
+                            label: '# of Articles',
+                            data: [themeData['human-agency'], themeData['decision-making'], themeData['humanlike-ai']],
+                            backgroundColor: [
+                                'rgba(79, 70, 229, 0.6)', // indigo
+                                'rgba(5, 150, 105, 0.6)', // emerald
+                                'rgba(147, 51, 234, 0.6)' // purple
+                            ],
+                            borderColor: [
+                                'rgba(79, 70, 229, 1)',
+                                'rgba(5, 150, 105, 1)',
+                                'rgba(147, 51, 234, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(tooltipItems) {
+                                        const item = tooltipItems[0];
+                                        let label = item.chart.data.labels[item.dataIndex];
+                                        if (Array.isArray(label)) {
+                                          return label.join(' ');
+                                        } else {
+                                          return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function initFieldChart() {
+                const ctx = document.getElementById('fieldChart');
+                if (!ctx) return;
+
+                const fieldData = {
+                    'org-comm': 0,
+                    'org-sci': 0
+                };
+                articlesData.forEach(a => {
+                    if (a.tags.includes('org-comm')) fieldData['org-comm']++;
+                    if (a.tags.includes('org-sci')) fieldData['org-sci']++;
+                });
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Organizational Comm.', 'Organization Science'],
+                        datasets: [{
+                            label: 'Publications',
+                            data: [fieldData['org-comm'], fieldData['org-sci']],
+                            backgroundColor: [
+                                'rgba(217, 119, 6, 0.7)', // amber
+                                'rgba(220, 38, 38, 0.7)'  // red
+                            ],
+                            borderColor: [
+                                'rgba(217, 119, 6, 1)',
+                                'rgba(220, 38, 38, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(tooltipItems) {
+                                        const item = tooltipItems[0];
+                                        let label = item.chart.data.labels[item.dataIndex];
+                                        if (Array.isArray(label)) {
+                                          return label.join(' ');
+                                        } else {
+                                          return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderArticles();
+            setupFiltering();
+            updateStats();
+            initThemeChart();
+            initFieldChart();
+        });
+    </script>
+
+</body>
+</html>
